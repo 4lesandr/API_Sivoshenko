@@ -1,57 +1,101 @@
-const formValues = {}  // Сюда пишутся значения формы (Object как в Java, или dict из Python)
-const formValidation = {}  // Сюда пишутся статусы валидации каждого поля. Если поле ни разу не валидировалось,
-// то при обращении к Object вернётся undefined, который при логическом сравнении обрабатывается как false
+const formValues = {};
+const formValidation = {
+    signUp: {
+        first_name: false,
+        last_name: false,
+        email: false,
+        password: false,
+        password_repeat: false
+    },
+    signIn: {
+        login_email: false,
+        login_password: false
+    }
+};
 
-
-// Объявляется и инициализируется константная переменная
-// Инициализация функцией, заданной в стрелочном виде
-export const validatePassword = (e) => {
-  formValidation.password = e.target.value
-  console.log("Password validation...")
-  console.log(e)
-  // Напишите код валидации здесь и присвойте true/false в объект(словарь) formValidation
-  // formValidation.password = ...  // formValidation['password'] = ... - то же самое, но другой синтаксис
-  return formValidation.password !== undefined   // Это заглушка, return вероятно надо переписать
+export const validateNonEmpty = (value) => {
+    return value.trim() !== '';
 }
-
 
 export const validateEmail = (email) => {
-  // Создадим шаблон регулярного выражения. В нём применяются шаблонные строки
-  // Гуглить по тегам: "шаблонные строки js", "регулярные выражения"
-  const regExp = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-
-  return String(email)
-    .toLowerCase()
-    .match(regExp);
+    const regExp = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regExp.test(String(email).toLowerCase().trim());
 }
 
-
-// Функция возвращающая true если все валидации пройдены, и false если хотя бы одна не пройдена
-export const getValidationStatus = () => {
-  // Происходит функциональная мгаия, читай строчку кода ниже как:
-  // Получить значения (не ключи) из объекта, затем применить к каждому значению функцию двойного логического отрицания
-  // (преобразование к булевому типу) и результаты всех применений это true, то вернуть true, иначе - false
-  return Object.values(formValidation).every((validationStatus) => !!validationStatus)
+export const validatePassword = (password) => {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    return passwordRegex.test(password.trim());
 }
 
-
-// Функция возвращающая которая ставит значение поля в форме по ключу
 export const setFormValue = (valueKey, newValue, validator) => {
-  formValues[valueKey] = newValue
-  if (validator !== undefined) {
-    formValidation[valueKey] = validator(newValue)
-  }
+    formValues[valueKey] = newValue;
+    if (validator) {
+        formValidation[valueKey] = validator(newValue);
+    }
 }
 
+export const getValidationStatus = (formId) => {
+    return Object.values(formValidation[formId]).every(status => !!status);
+}
 
-// Функция для обработки отправки формы регистрации
-// В этой функции должен быть http запрос на сервер для регистрации пользователя (сейчас просто демонстрация)
 export const submitSignUpForm = () => {
-  if (!getValidationStatus()) {
-    console.log("FORM IS INCORRECT")
-    return false
-  }
-  console.log("FORM IS FINE")
-  console.log(formValues)
-  return true
+    console.log("FORM IS FINE");
+    console.log(formValues);
+    return true;
 }
+
+export const submitSignInForm = () => {
+    console.log("LOGIN FORM IS FINE");
+    console.log(formValues);
+    return true;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    function updateButtonState(formId) {
+        const buttonId = formId === 'signUp' ? 'sign_up_btn' : 'sign_in_btn';
+        document.getElementById(buttonId).disabled = !getValidationStatus(formId);
+    }
+
+    function handleInput(id, validator, formId) {
+        const inputEl = document.getElementById(id);
+        inputEl.oninput = (e) => {
+            const field = id === 'password_repeat' ? 'password_repeat' : id;  
+            formValidation[formId][field] = validator(e.target.value);
+            updateButtonState(formId);
+            console.log("Current Validation Status:", formValidation[formId]); 
+        };
+    }
+
+    handleInput('first_name', validateNonEmpty, 'signUp');
+    handleInput('last_name', validateNonEmpty, 'signUp');
+    handleInput('email', validateEmail, 'signUp');
+    handleInput('password', validatePassword, 'signUp');
+    handleInput('password_repeat', (value) => value === document.getElementById('password').value, 'signUp');
+    handleInput('login_email', validateEmail, 'signIn');
+    handleInput('login_password', validateNonEmpty, 'signIn');
+
+    document.getElementById('sign_in_link').onclick = () => {
+        document.getElementById('sign_up_form').style.display = 'none';
+        document.getElementById('sign_in_form').style.display = 'block';
+    };
+
+    document.getElementById('sign_up_link').onclick = () => {
+        document.getElementById('sign_up_form').style.display = 'block';
+        document.getElementById('sign_in_form').style.display = 'none';
+    };
+
+    document.getElementById('sign_up_btn').onclick = (e) => {
+        e.preventDefault();
+        if (getValidationStatus('signUp')) {
+            submitSignUpForm();
+        }
+    };
+
+    document.getElementById('sign_in_btn').onclick = (e) => {
+        e.preventDefault();
+        if (getValidationStatus('signIn')) {
+            submitSignInForm();
+        }
+    };
+});

@@ -1,75 +1,69 @@
-import {setFormValue, submitSignUpForm, validateEmail, validatePassword} from "./utils.js"
+import { submitSignUpForm, submitSignInForm, validateEmail, validatePassword, validateNonEmpty } from './utils.js';
 
+document.addEventListener('DOMContentLoaded', () => {
+    const formValidation = {
+        signUp: {
+            first_name: false,
+            last_name: false,
+            email: false,
+            password: false,
+            password_repeat: false
+        },
+        signIn: {
+            login_email: false,
+            login_password: false
+        }
+    };
 
-////// ДЕМОНСТРАЦИОННЫЙ УЧАСТОК КОДА. На оценку не влияет, исключительно для саморазвития.
+    function updateButtonState(formId) {
+        const buttonId = formId === 'signUp' ? 'sign_up_btn' : 'sign_in_btn';
+        document.getElementById(buttonId).disabled = !Object.values(formValidation[formId]).every(Boolean);
+    }
 
-// Предлагаю "поиграться" с частями кода ниже, чтобы познакомиться с JS
-// Получаем элемент и меняем его класс, который определеён в библиотеке стилей materialize
-const password = document.getElementById('password');
-password.classList.add("valid")
-password.classList.remove("valid")
+    function handleInput(id, validator, formId) {
+        console.log(`Searching for element with ID: ${id}`);
+        const inputEl = document.getElementById(id);
+        if (!inputEl) {
+            console.error(`Element with ID ${id} not found. Check your HTML and ensure the ID is correct.`);
+            return;
+        }
+        inputEl.oninput = (e) => {
+            const field = id === 'password_repeat' ? 'password_repeat' : id;
+            formValidation[formId][field] = validator(e.target.value);
+            updateButtonState(formId);
+            console.log("Current Validation Status:", formValidation[formId]);
+        };
+    }
 
-// В браузере можно посмотреть, что из себя представляет документ
-// (CTRL+SHIFT+i для открытия консоли и открыть вкладку "консоль", туда будет залогированно значение)
-console.log("Document")
-console.log(document)
+    handleInput('first_name', validateNonEmpty, 'signUp');
+    handleInput('last_name', validateNonEmpty, 'signUp');
+    handleInput('email', validateEmail, 'signUp');
+    handleInput('password', validatePassword, 'signUp');
+    handleInput('password_repeat', validatePassword, 'signUp');
+    handleInput('login_email', validateEmail, 'signIn');
+    handleInput('login_password', validateNonEmpty, 'signIn');
 
-// Если запросить id, которого нет в DOM дереве - вернется undefined
-// => надо быть осторожней: коллега может поменять id вашего элемента и упадёт !ВАШ! код
-// const first_name = document.getElementById('first_name_invalid');
-// first_name.oninput = (e) => validatePassword(e)
+    document.getElementById('sign_in_link').onclick = () => {
+        document.getElementById('sign_up_form').style.display = 'none';
+        document.getElementById('sign_in_form').style.display = 'block';
+    };
 
-// Селекция по классу. Может пригодится, для того, чтобы упростить обработку полей в двух формах.
-// Чтобы не делать кучу уникальных айди, можно определённым полям формы давать один класс и обрабатывать их в цикле
-// const passwords = document.querySelectorAll('.password')
-// console.log(passwords)
-// for (const password of passwords) {
-//   password.style.background = "red"
-// }
+    document.getElementById('sign_up_link').onclick = () => {
+        document.getElementById('sign_up_form').style.display = 'block';
+        document.getElementById('sign_in_form').style.display = 'none';
+    };
 
-////// КОНЕЦ ДЕМОНСТРАЦИОННОГО УЧАСТКА КОДА. Дальше код для оцениваемой части задания
+    document.getElementById('sign_up_btn').onclick = (e) => {
+        e.preventDefault();
+        if (Object.values(formValidation.signUp).every(Boolean)) {
+            submitSignUpForm();
+        }
+    };
 
-
-// Выписываем все айдишники HTMl-элементов в константы для переиспользования
-const first_name_id = 'first_name'
-const last_name_id = 'last_name'
-const password_id = 'password'
-const email_id = 'email'
-
-const sign_in_link_id = 'sign_in_link'
-const sign_up_form_id = 'sign_up_form'
-// const sign_in_form_id = 'sign_in_form'  // Пригодится
-const sign_up_btn_id = 'sign_up_btn'
-const sign_in_form_id = 'sign_in_form'
-
-
-// Получаем элемент DOM-дерева по id и присваиваем значение аттрибуту oninput
-// oninput вызывается с параметром "event" каждый раз, когда ввод меняется
-// Значение, которое мы присваеваем этому аттрибуту - это функция, определённая в стрелочном стиле
-// Гуглить по тегам "события JS", "onchange/oninput HTML", "стрелочные функции JS", ...
-
-const first_name = document.getElementById(first_name_id);
-first_name.oninput = (e) => setFormValue(first_name_id, e.target.value)  // Установить значение без валидации
-
-const email = document.getElementById(email_id);
-email.oninput = (e) => setFormValue(email_id, e.target.value, validateEmail) // Установить значение с валидацией
-
-
-
-// Меняем стили объекта DOM дерева. Это позволяет скрыть форму регистрации и показать форму авторизации
-// Объект формы не исключается из DOM дерева, а просто становистя невидимым
-const switch_to_sign_in = document.getElementById(sign_in_link_id);
-switch_to_sign_in.onclick = (e) => {
-  document.getElementById(sign_up_form_id).style.display = "none"
-  document.getElementById(sign_in_form_id).style.display = ""
-}
-
-
-const sign_up_btn = document.getElementById(sign_up_btn_id);
-sign_up_btn.onclick = (e) => {
-  // При нажатии кнопки в форме по умолчанию происходит перезагрузка страницы.
-  // Чтобы отключить его, нужно отменить стандартное поведение события
-  e.preventDefault()
-  submitSignUpForm()
-}
-
+    document.getElementById('sign_in_btn').onclick = (e) => {
+        e.preventDefault();
+        if (Object.values(formValidation.signIn).every(Boolean)) {
+            submitSignInForm();
+        }
+    };
+});
